@@ -2,3 +2,6 @@ build/
 sdkconfig.old
 sdkconfig
 *.o
+.cache/clangd/index
+.envrc
+dependencies.lock
