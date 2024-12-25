@@ -55,14 +55,12 @@ void onDisconnectedController(ControllerPtr ctl) {
         leftStick.onDisconnect();
         foundController = true;
     }
-
     else if (rightStick.getController() == ctl) {
         Console.println("CALLBACK: Controller disconnected from right");
         rightStick.setController(nullptr);
         rightStick.onDisconnect();
         foundController = true;
     }
-
     if (!foundController) {
         Console.println("CALLBACK: Controller disconnected, but not found in myControllers");
     }
@@ -104,8 +102,6 @@ void setup() {
     bpSetup();
     REELTWO_READY();
     Serial2.begin(9600);
-    DEBUG_PRINTLN("Testing reeltwo debug...");
-    //while(!Serial2);
     SetupEvent::ready();
 }
 
@@ -115,6 +111,7 @@ void loop() {
     // Call this function in your main loop.
     BP32.update();
     leftStick.mapController();
+    rightStick.mapController();
     AnimatedEvent::process();
     vTaskDelay(1);
 }
