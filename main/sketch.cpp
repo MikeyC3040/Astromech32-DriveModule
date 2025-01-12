@@ -13,6 +13,7 @@
 #include "core/SetupEvent.h"
 #include "drive/TankDriveCytron.h"
 #include "esp32-hal.h"
+#include "hcr.h"
 
 #include <Arduino.h>
 #include <Bluepad32.h>
@@ -21,6 +22,8 @@
 
 JoyController leftStick=JoyController();
 JoyController rightStick=JoyController();
+unsigned int button_debounce = 200;
+unsigned long button_current = 0;
 
 void onConnectedController(ControllerPtr ctl) {
     bool foundEmptySlot = false;
@@ -28,6 +31,7 @@ void onConnectedController(ControllerPtr ctl) {
         if (!leftStick.isConnected()){
             Console.println("CALLBACK: Left controller is connected...");
             leftStick.setController(ctl);
+            ctl->setPlayerLEDs(1);
             leftStick.onConnect();
             leftStick.setDrive(true);
             Console.printf("Controller at address: %d\n", leftStick.getController());
@@ -37,6 +41,7 @@ void onConnectedController(ControllerPtr ctl) {
         if (!rightStick.isConnected()){
             Console.println("CALLBACK: Right controller is connected...");
             rightStick.setController(ctl);
+            ctl->setPlayerLEDs(2);
             rightStick.onConnect();
             Console.printf("Controller at address: %d\n", rightStick.getController());
             foundEmptySlot = true;
@@ -95,13 +100,19 @@ void bpSetup(){
 }
 
 
-TankDriveCytron tankDrive(byte(0),Serial2,0x80,leftStick);
+TankDriveCytron tankDrive(byte(0),Serial2,MDDS30,leftStick);
 
+
+HCRVocalizer HCR(&Serial1,115200); // Serial (Stream Port, baud rate)
 // Arduino setup function. Runs in CPU 1
 void setup() {
     bpSetup();
+    Serial1.begin(115200, SERIAL_8N1, 26, 27);
+    HCR.begin(250);
+    HCR.SetMuse(false);
+    HCR.OverrideEmotions(false);
     REELTWO_READY();
-    Serial2.begin(9600);
+    Serial2.begin(115200);
     SetupEvent::ready();
 }
 
@@ -112,6 +123,30 @@ void loop() {
     BP32.update();
     leftStick.mapController();
     rightStick.mapController();
+    if (millis() - button_current > button_debounce){
+        if (rightStick.state.button.r1){
+            HCR.ToggleMuse();
+        }
+        int emoteLevel = EMOTE_MODERATE;
+        if (rightStick.state.button.r2){
+            emoteLevel = EMOTE_STRONG;
+        }
+        if(rightStick.state.button.circle){
+            HCR.Stimulate(HAPPY, emoteLevel);
+        }
+        else if(rightStick.state.button.cross){
+            HCR.Stimulate(SAD, emoteLevel);
+        }
+        else if(rightStick.state.button.square){
+            HCR.Stimulate(SCARED, emoteLevel);
+        }
+        else if(rightStick.state.button.triangle){
+            HCR.Stimulate(MAD, emoteLevel);
+        }
+        button_current = millis();
+    }
+
     AnimatedEvent::process();
+    HCR.update();
     vTaskDelay(1);
 }

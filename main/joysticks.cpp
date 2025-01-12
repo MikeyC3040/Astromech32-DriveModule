@@ -1,4 +1,5 @@
 #include "joysticks.h"
+#include <cstdint>
 #include "ArduinoConsole.h"
 #include "ArduinoController.h"
 #include "esp32-hal.h"
@@ -60,8 +61,6 @@ void JoyController::mapController(){
                 if ((millis() - _lastUpdate) > 1000){
                     clearController();
                     _ctrl->disconnect();
-                    fConnected = false;
-                    _ctrl = nullptr;
                     #ifdef CONFIG_DEBUG_JOYSTICK
                     Console.printf("Controller distance timeout\n");
                     #endif
@@ -75,7 +74,6 @@ void JoyController::mapController(){
     }
 }
 
-
 bool JoyController::mapLeft(){
     state.button.select = _ctrl->miscStart();
     state.button.start = _ctrl->miscSelect();
@@ -85,9 +83,9 @@ bool JoyController::mapLeft(){
     state.button.triangle = _ctrl->x();
     state.button.square = _ctrl->a();
     state.button.l1 = _ctrl->l2();
-    state.button.l2 = _ctrl->r2();
+    state.button.l2 = _ctrl->r1();
     state.button.r1 = _ctrl->l1();
-    state.button.r2 = _ctrl->r1();
+    state.button.r2 = _ctrl->r2();
     state.analog.stick.lx = map(_ctrl->axisY()*-1,-512,512,-127,127);
     state.analog.stick.ly = map(_ctrl->axisX()*-1,-512,512,127,-127);
     #ifdef CONFIG_DEBUG_JOYSTICK
@@ -104,10 +102,10 @@ bool JoyController::mapRight(){
     state.button.cross = _ctrl->x();
     state.button.triangle = _ctrl->b();
     state.button.square = _ctrl->y();
-    state.button.l1 = _ctrl->l2();
+    state.button.l1 = _ctrl->l1();
     state.button.l2 = _ctrl->r2();
-    state.button.r1 = _ctrl->l1();
-    state.button.r2 = _ctrl->r1();    clearController();
+    state.button.r1 = _ctrl->l2();
+    state.button.r2 = _ctrl->r1();
 
     state.analog.stick.rx = map(_ctrl->axisY(),-512,512,-127,127);
     state.analog.stick.ry = map(_ctrl->axisX(),-512,512,-127,127);

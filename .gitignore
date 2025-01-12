@@ -5,3 +5,4 @@ sdkconfig
 .cache/clangd/index
 .envrc
 dependencies.lock
+env/

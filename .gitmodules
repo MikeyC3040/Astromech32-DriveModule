@@ -4,3 +4,6 @@
 [submodule "components/Reeltwo"]
 	path = components/Reeltwo
 	url = https://github.com/MikeyC3040/Reeltwo.git
+[submodule "components/HumanCyborgRelationsAPI"]
+	path = components/HumanCyborgRelationsAPI
+	url = https://github.com/MikeyC3040/HumanCyborgRelationsAPI.git
