@@ -22,8 +22,6 @@
 
 JoyController leftStick=JoyController();
 JoyController rightStick=JoyController();
-unsigned int button_debounce = 200;
-unsigned long button_current = 0;
 
 void onConnectedController(ControllerPtr ctl) {
     bool foundEmptySlot = false;
@@ -33,7 +31,7 @@ void onConnectedController(ControllerPtr ctl) {
             leftStick.setController(ctl);
             ctl->setPlayerLEDs(1);
             leftStick.onConnect();
-            leftStick.setDrive(true);
+            leftStick.setLeft(true);
             Console.printf("Controller at address: %d\n", leftStick.getController());
             foundEmptySlot = true;
         }
@@ -108,7 +106,7 @@ HCRVocalizer HCR(&Serial1,115200); // Serial (Stream Port, baud rate)
 void setup() {
     bpSetup();
     Serial1.begin(115200, SERIAL_8N1, 26, 27);
-    HCR.begin(250);
+    HCR.begin();
     HCR.SetMuse(false);
     HCR.OverrideEmotions(false);
     REELTWO_READY();
@@ -120,32 +118,45 @@ void setup() {
 void loop() {
     // This call fetches all the controllers' data.
     // Call this function in your main loop.
-    BP32.update();
-    leftStick.mapController();
-    rightStick.mapController();
-    if (millis() - button_current > button_debounce){
-        if (rightStick.state.button.r1){
+    if (BP32.update()){
+        leftStick.notify();
+        rightStick.notify();
+        if (rightStick.event.button_down.r1){
             HCR.ToggleMuse();
+        }
+        if(rightStick.event.button_down.start){
+            int currentWav = HCR.GetPlayingWAV(CH_A);
+            if (currentWav != -1){
+                HCR.StopWAV(CH_A);
+            } else {
+                HCR.PlayWAV(CH_A,0);
+            }
+        }
+        if(rightStick.event.button_down.select){
+            int currentWav = HCR.GetPlayingWAV(CH_B);
+            if (currentWav != -1){
+                HCR.StopWAV(CH_B);
+            } else {
+                HCR.PlayWAV(CH_B,1);
+            }
         }
         int emoteLevel = EMOTE_MODERATE;
         if (rightStick.state.button.r2){
             emoteLevel = EMOTE_STRONG;
         }
-        if(rightStick.state.button.circle){
+        if(rightStick.event.button_down.circle){
             HCR.Stimulate(HAPPY, emoteLevel);
         }
-        else if(rightStick.state.button.cross){
+        else if(rightStick.event.button_down.cross){
             HCR.Stimulate(SAD, emoteLevel);
         }
-        else if(rightStick.state.button.square){
+        else if(rightStick.event.button_down.square){
             HCR.Stimulate(SCARED, emoteLevel);
         }
-        else if(rightStick.state.button.triangle){
+        else if(rightStick.event.button_down.triangle){
             HCR.Stimulate(MAD, emoteLevel);
         }
-        button_current = millis();
     }
-
     AnimatedEvent::process();
     HCR.update();
     vTaskDelay(1);

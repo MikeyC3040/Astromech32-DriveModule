@@ -30,48 +30,96 @@ void dumpGamepad(ControllerPtr ctl) {
     );
 }
 
-void JoyController::setDrive(bool drive){
-    _drive = drive;
+void JoyController::setLeft(bool left){
+    _left = left;
 }
 
 void JoyController::setController(ControllerPtr ctrl){
     _ctrl = ctrl;
     _lastUpdate = millis();
+    fConnected = true;
 }
 
 ControllerPtr JoyController::getController(){
     return _ctrl;
 }
 
-void JoyController::mapController(){
-    if (_ctrl) {
-        fConnected = _ctrl->isConnected();
-        if (fConnected){
-            if (_ctrl->hasData()) {
-                _mapped = false;
-                _mapped = _drive ? mapLeft() : mapRight();
-                if (_mapped){
-                    #ifdef CONFIG_DEBUG_JOYSTICK
-                    dumpGamepad(_ctrl);
-                    #endif
-                    _lastUpdate = millis();
-                    return;
-                }
-            } else {
-                if ((millis() - _lastUpdate) > 1000){
-                    clearController();
-                    _ctrl->disconnect();
-                    #ifdef CONFIG_DEBUG_JOYSTICK
-                    Console.printf("Controller distance timeout\n");
-                    #endif
-                }
+void JoyController::disconnect(){
+    _ctrl->disconnect();
+    _ctrl = nullptr;
+    fConnected = false;
+}
+
+void JoyController::notify(){
+    {
+        uint32_t currentTime = millis();
+        uint32_t lagTime = (currentTime > _lastUpdate) ? currentTime - _lastUpdate : 0;
+        if(_ctrl){
+            if (_ctrl->hasData())
+            {
+                mapController();
+                _lastUpdate = currentTime;
+            }
+            else if (lagTime > 5000)
+            {
+                Console.println("More than 5 seconds. Disconnect");
+                clearController();
+                disconnect();
+            }
+            else if (lagTime > 300)
+            {
+                Console.println("It has been 300ms. Clear controller");
+                clearController();
             }
         }
-    } else {
-        #ifdef CONFIG_DEBUG_JOYSTICK
-        Console.println("No controller to map...");
-        #endif
     }
+
+}
+
+
+void JoyController::mapController(){
+    Event evt = {};
+    State prev = state;
+    _mapped = false;
+    _mapped = _left ? mapLeft() : mapRight();
+    if (_mapped){
+        #ifdef CONFIG_DEBUG_JOYSTICK
+        dumpGamepad(_ctrl);
+        #endif
+
+        #define CHECK_BUTTON_DOWN(b) evt.button_down.b = (!prev.button.b && state.button.b)
+        CHECK_BUTTON_DOWN(select);
+        CHECK_BUTTON_DOWN(start);
+        CHECK_BUTTON_DOWN(l3);
+        CHECK_BUTTON_DOWN(r3);
+
+        CHECK_BUTTON_DOWN(l2);
+        CHECK_BUTTON_DOWN(r2);
+        CHECK_BUTTON_DOWN(l1);
+        CHECK_BUTTON_DOWN(r1);
+
+        CHECK_BUTTON_DOWN(triangle);
+        CHECK_BUTTON_DOWN(circle);
+        CHECK_BUTTON_DOWN(cross);
+        CHECK_BUTTON_DOWN(square);
+
+        #define CHECK_BUTTON_UP(b) evt.button_up.b = (prev.button.b && !state.button.b)
+        CHECK_BUTTON_UP(select);
+        CHECK_BUTTON_UP(start);
+        CHECK_BUTTON_UP(l3);
+        CHECK_BUTTON_UP(r3);
+
+        CHECK_BUTTON_UP(l2);
+        CHECK_BUTTON_UP(r2);
+        CHECK_BUTTON_UP(l1);
+        CHECK_BUTTON_UP(r1);
+
+        CHECK_BUTTON_UP(triangle);
+        CHECK_BUTTON_UP(circle);
+        CHECK_BUTTON_UP(cross);
+        CHECK_BUTTON_UP(square);
+    }
+    event = evt;
 }
 
 bool JoyController::mapLeft(){
@@ -97,7 +145,7 @@ bool JoyController::mapLeft(){
 bool JoyController::mapRight(){
     state.button.select = _ctrl->miscSelect();
     state.button.start = _ctrl->miscStart();
-    state.button.l3 = _ctrl->thumbL();
+    state.button.r3 = _ctrl->thumbL();
     state.button.circle = _ctrl->a();
     state.button.cross = _ctrl->x();
     state.button.triangle = _ctrl->b();
@@ -119,6 +167,7 @@ void JoyController::clearController(){
     state.button.select = 0;
     state.button.start = 0;
     state.button.l3 = 0;
+    state.button.r3 = 0;
     state.button.circle = 0;
     state.button.cross = 0;
     state.button.triangle = 0;

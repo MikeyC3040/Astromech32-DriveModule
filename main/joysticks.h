@@ -10,23 +10,25 @@ void dumpGamepad(ControllerPtr ctl);
 class JoyController: public JoystickController {
     public:
     JoyController(): JoystickController(){
-        _drive = false;
+        _left = false;
         _lastUpdate = 0;
         _ctrl = nullptr;
     }
-    void setDrive(bool drive);
+    void setLeft(bool left);
     void setController(ControllerPtr ctrl);
     ControllerPtr getController();
-    void mapController();
+    virtual void disconnect() override;
+    virtual void notify() override;
     void clearController();
 
     private:
+    void mapController();
     unsigned long _lastUpdate;
     ControllerPtr _ctrl;
     bool mapLeft();
     bool mapRight();
     bool _mapped;
-    bool _drive;
+    bool _left;
 };
 
 typedef JoyController* JoyPtr;
