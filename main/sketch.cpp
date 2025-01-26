@@ -2,6 +2,7 @@
 // Copyright 2021 Ricardo Quesada
 // http://retro.moe/unijoysticle2
 #include "sdkconfig.h"
+#include <Arduino.h>
 
 #define USE_DEBUG
 #define USE_MOTOR_DEBUG
@@ -75,7 +76,7 @@ void bpSetup(){
     Console.printf("BD Addr: %2X:%2X:%2X:%2X:%2X:%2X\n", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 
     // Setup the Bluepad32 callbacks
-    BP32.setup(&onConnectedController, &onDisconnectedController);
+    BP32.setup(&onConnectedController, &onDisconnectedController, true);
 
     // "forgetBluetoothKeys()" should be called when the user performs
     // a "device factory reset", or similar.
@@ -98,7 +99,7 @@ void bpSetup(){
 }
 
 
-TankDriveCytron tankDrive(byte(0),Serial2,MDDS30,leftStick);
+TankDriveCytron tankDrive(uint8_t(0),Serial2,MDDS30,leftStick);
 
 
 HCRVocalizer HCR(&Serial1,115200); // Serial (Stream Port, baud rate)
@@ -124,22 +125,6 @@ void loop() {
         if (rightStick.event.button_down.r1){
             HCR.ToggleMuse();
         }
-        if(rightStick.event.button_down.start){
-            int currentWav = HCR.GetPlayingWAV(CH_A);
-            if (currentWav != -1){
-                HCR.StopWAV(CH_A);
-            } else {
-                HCR.PlayWAV(CH_A,0);
-            }
-        }
-        if(rightStick.event.button_down.select){
-            int currentWav = HCR.GetPlayingWAV(CH_B);
-            if (currentWav != -1){
-                HCR.StopWAV(CH_B);
-            } else {
-                HCR.PlayWAV(CH_B,1);
-            }
-        }
         int emoteLevel = EMOTE_MODERATE;
         if (rightStick.state.button.r2){
             emoteLevel = EMOTE_STRONG;
@@ -155,6 +140,20 @@ void loop() {
         }
         else if(rightStick.event.button_down.triangle){
             HCR.Stimulate(MAD, emoteLevel);
+        }
+        if(rightStick.event.button_down.start){
+            int channel = CH_A;
+            int song = 0;
+            if (emoteLevel == EMOTE_STRONG){
+                channel = CH_B;
+                song = 1;
+            }
+            int currentWav = HCR.GetPlayingWAV(channel);
+            if (currentWav != -1){
+                HCR.StopWAV(channel);
+            } else {
+                HCR.PlayWAV(channel,song);
+            }
         }
     }
     AnimatedEvent::process();

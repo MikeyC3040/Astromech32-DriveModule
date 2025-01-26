@@ -206,6 +206,7 @@ void uni_bt_bredr_process_fsm(uni_hid_device_t* d) {
     // logi("uni_bt_process_fsm: %p = 0x%02x\n", d, d->state);
     if (d == NULL) {
         loge("uni_bt_process_fsm: Invalid device\n");
+        return;
     }
     // Two possible flows:
     // - Incoming (initiated by gamepad)
@@ -342,6 +343,12 @@ void uni_bt_bredr_on_l2cap_incoming_connection(uint16_t channel, const uint8_t* 
         "remote_cid=0x%04x, handle=0x%04x, "
         "channel=0x%04x, addr=%s\n",
         psm, local_cid, remote_cid, handle, channel, bd_addr_to_str(event_addr));
+
+    if (!uni_bt_incoming_connections_is_allowed()) {
+        loge("Declining incoming connection: Incoming connections not allowed: %s\n", bd_addr_to_str(event_addr));
+        l2cap_decline_connection(channel);
+        return;
+    }
 
     if (!uni_bt_allowlist_is_allowed_addr(event_addr)) {
         loge("Declining incoming connection: Device not in allow-list: %s\n", bd_addr_to_str(event_addr));
@@ -641,7 +648,7 @@ void uni_bt_bredr_on_hci_connection_complete(uint16_t channel, const uint8_t* pa
     //   hci_send_cmd(&hci_authentication_requested, handle);
     // }
 
-    int cod = d->cod;
+    uint32_t cod = d->cod;
     bool is_keyboard = ((cod & UNI_BT_COD_MAJOR_MASK) == UNI_BT_COD_MAJOR_PERIPHERAL) && (cod & UNI_BT_COD_MINOR_MASK);
     if (is_keyboard) {
         // gap_request_security_level(handle, LEVEL_1);

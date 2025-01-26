@@ -13,7 +13,7 @@
 Bluepad32::Bluepad32() : _prevConnectedControllers(0), _controllers(), _onConnect(), _onDisconnect() {}
 
 const char* Bluepad32::firmwareVersion() const {
-    return "Bluepad32 for Arduino v" UNI_VERSION;
+    return "Bluepad32 for Arduino v" UNI_VERSION_STRING;
 }
 
 bool Bluepad32::update() {
@@ -75,12 +75,17 @@ void Bluepad32::forgetBluetoothKeys() {
 }
 
 void Bluepad32::enableNewBluetoothConnections(bool enabled) {
-    uni_bt_enable_new_connections_safe(enabled);
+    if (enabled)
+        uni_bt_start_scanning_and_autoconnect_safe();
+    else
+        uni_bt_stop_scanning_safe();
 }
 
-void Bluepad32::setup(const GamepadCallback& onConnect, const GamepadCallback& onDisconnect) {
+void Bluepad32::setup(const GamepadCallback& onConnect, const GamepadCallback& onDisconnect, bool startScanning) {
     _onConnect = onConnect;
     _onDisconnect = onDisconnect;
+
+    enableNewBluetoothConnections(startScanning);
 }
 
 const uint8_t* Bluepad32::localBdAddress() {
