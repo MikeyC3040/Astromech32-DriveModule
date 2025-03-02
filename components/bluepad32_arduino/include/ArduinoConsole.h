@@ -18,6 +18,10 @@ class Console {
     void print(const char* str);
     void print(int i);
 
+    void printhex(const String& str);
+    void printhex(const char* str);
+    void printhex(int i);
+
     void println();
     void println(const String& str);
     void println(const char* str);

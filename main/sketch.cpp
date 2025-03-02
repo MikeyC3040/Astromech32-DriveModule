@@ -3,20 +3,27 @@
 // http://retro.moe/unijoysticle2
 #include "sdkconfig.h"
 #include <Arduino.h>
+#include "esp32-hal.h"
 
 #define USE_DEBUG
-#define USE_MOTOR_DEBUG
+//#define USE_MOTOR_DEBUG
+//#define USE_DOME_DEBUG
+//#define USE_VERBOSE_DOME_DEBUG
 
 #include "ArduinoConsole.h"
 #include "HardwareSerial.h"
+#include "Wire.h"
+#include "ReelTwoSMQ32.h"
 #include "ReelTwo.h"
 #include "core/AnimatedEvent.h"
 #include "core/SetupEvent.h"
 #include "drive/TankDriveCytron.h"
-#include "esp32-hal.h"
+#include "drive/DomeDriveCytron.h"
+#include "ServoDispatchDirect.h"
+
+#define HCR_I2C_RATE 100000
 #include "hcr.h"
 
-#include <Arduino.h>
 #include <Bluepad32.h>
 
 #include "joysticks.h"
@@ -78,18 +85,8 @@ void bpSetup(){
     // Setup the Bluepad32 callbacks
     BP32.setup(&onConnectedController, &onDisconnectedController, true);
 
-    // "forgetBluetoothKeys()" should be called when the user performs
-    // a "device factory reset", or similar.
-    // Calling "forgetBluetoothKeys" in setup() just as an example.
-    // Forgetting Bluetooth keys prevents "paired" gamepads to reconnect.
-    // But it might also fix some connection / re-connection issues.
     //BP32.forgetBluetoothKeys();
 
-    // Enables mouse / touchpad support for gamepads that support them.
-    // When enabled, controllers like DualSense and DualShock4 generate two connected devices:
-    // - First one: the gamepad
-    // - Second one, which is a "virtual device", is a mouse.
-    // By default, it is disabled.
     BP32.enableVirtualDevice(false);
 
     // Enables the BLE Service in Bluepad32.
@@ -98,32 +95,31 @@ void bpSetup(){
     BP32.enableBLEService(false);
 }
 
+TankDriveCytron tankDrive(uint8_t(0),Serial2,MDDS30,leftStick, false);
+DomeDriveCytron domeDrive(uint8_t(1),Serial1,MDDS10,rightStick, false);
 
-TankDriveCytron tankDrive(uint8_t(0),Serial2,MDDS30,leftStick);
-
-
-HCRVocalizer HCR(&Serial1,115200); // Serial (Stream Port, baud rate)
+HCRVocalizer HCR(1,Wire);
 // Arduino setup function. Runs in CPU 1
 void setup() {
     bpSetup();
-    Serial1.begin(115200, SERIAL_8N1, 26, 27);
+    Serial1.begin(9600, SERIAL_8N1,13,25); //rx, tx
+    Wire.setPins(26,27);
     HCR.begin();
     HCR.SetMuse(false);
     HCR.OverrideEmotions(false);
     REELTWO_READY();
-    Serial2.begin(115200);
+    Serial2.begin(9600, SERIAL_8N1, 16, 17); //rx, tx
     SetupEvent::ready();
 }
 
 // Arduino loop function. Runs in CPU 1.
 void loop() {
-    // This call fetches all the controllers' data.
-    // Call this function in your main loop.
     if (BP32.update()){
         leftStick.notify();
         rightStick.notify();
         if (rightStick.event.button_down.r1){
             HCR.ToggleMuse();
+            Console.printf("Musing: %d\n", HCR.GetMuse());
         }
         int emoteLevel = EMOTE_MODERATE;
         if (rightStick.state.button.r2){
@@ -149,12 +145,14 @@ void loop() {
                 song = 1;
             }
             int currentWav = HCR.GetPlayingWAV(channel);
+            Console.printf("Channel: %d Song: %d, CurrentWave: %d\n", channel, song, currentWav);
             if (currentWav != -1){
                 HCR.StopWAV(channel);
             } else {
                 HCR.PlayWAV(channel,song);
             }
         }
+        //Console.printf("HCR State: %f %f %f %f\n", HCR.GetEmotions());
     }
     AnimatedEvent::process();
     HCR.update();

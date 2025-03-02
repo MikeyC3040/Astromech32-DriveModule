@@ -22,6 +22,18 @@ void Console::print(int i) {
     uni_log("%d", i);
 }
 
+void Console::printhex(const String& str) {
+    uni_log("%X", str.c_str());
+}
+
+void Console::printhex(const char* str) {
+    uni_log("%X", str);
+}
+
+void Console::printhex(int i) {
+    uni_log("%X", i);
+}
+
 void Console::println() {
     uni_log("\n");
 }
