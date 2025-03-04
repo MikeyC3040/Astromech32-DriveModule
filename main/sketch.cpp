@@ -107,6 +107,9 @@ void setup() {
     HCR.begin();
     HCR.SetMuse(false);
     HCR.OverrideEmotions(false);
+    tankDrive.setMaxSpeed(0.25);
+    tankDrive.setAccelerationScale(5);
+    tankDrive.setDecelerationScale(5);
     REELTWO_READY();
     Serial2.begin(9600, SERIAL_8N1, 16, 17); //rx, tx
     SetupEvent::ready();
