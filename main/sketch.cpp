@@ -20,6 +20,7 @@
 #include "drive/TankDriveCytron.h"
 #include "drive/DomeDriveCytron.h"
 #include "ServoDispatchDirect.h"
+#include "core/PushButton.h"
 
 #define HCR_I2C_RATE 100000
 #include "hcr.h"
@@ -31,48 +32,54 @@
 JoyController leftStick=JoyController();
 JoyController rightStick=JoyController();
 
+PushButton utilBtn(14);
+
+bool pairingBT = true;
+
 void onConnectedController(ControllerPtr ctl) {
     bool foundEmptySlot = false;
     if (ctl->getModelName() == "Switch JoyCon Left") {
         if (!leftStick.isConnected()){
-            Console.println("CALLBACK: Left controller is connected...");
             leftStick.setController(ctl);
             ctl->setPlayerLEDs(1);
             leftStick.onConnect();
             leftStick.setLeft(true);
-            Console.printf("Controller at address: %d\n", leftStick.getController());
             foundEmptySlot = true;
+            Console.println("CALLBACK: Left controller is connected...");
         }
     } else if (ctl->getModelName() == "Switch JoyCon Right") {
         if (!rightStick.isConnected()){
-            Console.println("CALLBACK: Right controller is connected...");
             rightStick.setController(ctl);
             ctl->setPlayerLEDs(2);
             rightStick.onConnect();
-            Console.printf("Controller at address: %d\n", rightStick.getController());
             foundEmptySlot = true;
+            Console.println("CALLBACK: Right controller is connected...");
         }
+    }
+    if (leftStick.getController() && rightStick.getController()){
+        pairingBT = false;
+        BP32.enableNewBluetoothConnections(pairingBT);
     }
     if (!foundEmptySlot) {
         Console.println("CALLBACK: Controller connected, but could not find empty joystick");
     }
 }
 
+
 void onDisconnectedController(ControllerPtr ctl) {
     bool foundController = false;
     if (leftStick.getController() == ctl) {
-        Console.println("CALLBACK: Controller disconnected from left");
-        leftStick.setController(nullptr);
-        leftStick.onDisconnect();
+        leftStick.disconnect();
         foundController = true;
+        Console.println("CALLBACK: Controller disconnected from left");
     }
     else if (rightStick.getController() == ctl) {
-        Console.println("CALLBACK: Controller disconnected from right");
-        rightStick.setController(nullptr);
-        rightStick.onDisconnect();
+        rightStick.disconnect();
         foundController = true;
+        Console.println("CALLBACK: Controller disconnected from right");
     }
     if (!foundController) {
+        ctl->disconnect();
         Console.println("CALLBACK: Controller disconnected, but not found in myControllers");
     }
 }
@@ -83,7 +90,7 @@ void bpSetup(){
     Console.printf("BD Addr: %2X:%2X:%2X:%2X:%2X:%2X\n", addr[0], addr[1], addr[2], addr[3], addr[4], addr[5]);
 
     // Setup the Bluepad32 callbacks
-    BP32.setup(&onConnectedController, &onDisconnectedController, true);
+    BP32.setup(&onConnectedController, &onDisconnectedController, pairingBT);
 
     //BP32.forgetBluetoothKeys();
 
@@ -95,6 +102,17 @@ void bpSetup(){
     BP32.enableBLEService(false);
 }
 
+void toggleBTPairing(){
+    pairingBT = !pairingBT;
+    if (pairingBT){
+        Console.println("BT Pairing Mode Enabled");
+        BP32.enableNewBluetoothConnections(true);
+    } else {
+        Console.println("BT Pairing Mode Disabled");
+        BP32.enableNewBluetoothConnections(false);
+    }
+};
+
 TankDriveCytron tankDrive(uint8_t(0),Serial2,MDDS30,leftStick, false);
 DomeDriveCytron domeDrive(uint8_t(1),Serial1,MDDS10,rightStick, false);
 
@@ -102,7 +120,8 @@ HCRVocalizer HCR(1,Wire);
 // Arduino setup function. Runs in CPU 1
 void setup() {
     bpSetup();
-    Serial1.begin(9600, SERIAL_8N1,13,25); //rx, tx
+    Serial1.begin(9600, SERIAL_8N1, 13, 25); //rx, tx
+    Serial2.begin(9600, SERIAL_8N1, 16, 17); //rx, tx
     Wire.setPins(26,27);
     HCR.begin();
     HCR.SetMuse(false);
@@ -110,8 +129,8 @@ void setup() {
     tankDrive.setMaxSpeed(0.25);
     tankDrive.setAccelerationScale(5);
     tankDrive.setDecelerationScale(5);
+    utilBtn.attachClick(toggleBTPairing);
     REELTWO_READY();
-    Serial2.begin(9600, SERIAL_8N1, 16, 17); //rx, tx
     SetupEvent::ready();
 }
 
@@ -158,6 +177,6 @@ void loop() {
         //Console.printf("HCR State: %f %f %f %f\n", HCR.GetEmotions());
     }
     AnimatedEvent::process();
-    HCR.update();
+    //HCR.update();
     vTaskDelay(1);
 }

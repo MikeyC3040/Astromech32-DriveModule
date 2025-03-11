@@ -136,7 +136,7 @@ bool JoyController::mapLeft(){
     state.button.r2 = _ctrl->r1();
     state.analog.stick.lx = map(_ctrl->axisY()*-1,-512,512,-127,127);
     state.analog.stick.ly = map(_ctrl->axisX()*-1,-512,512,127,-127);
-    #ifdef CONFIG_DEBUG_JOYSTICK
+    #ifdef DEBUG_JOYSTICK
     Console.printf("Mapped left X: %d Y: %d\n", state.analog.stick.lx, state.analog.stick.ly);
     #endif
     return true;
@@ -157,7 +157,7 @@ bool JoyController::mapRight(){
 
     state.analog.stick.rx = map(_ctrl->axisY(),-512,512,-127,127);
     state.analog.stick.ry = map(_ctrl->axisX(),-512,512,-127,127);
-    #ifdef CONFIG_DEBUG_JOYSTICK
+    #ifdef DEBUG_JOYSTICK
     Console.printf("Mapped right X: %d Y: %d\n", state.analog.stick.rx, state.analog.stick.ry);
     #endif
     return true;
